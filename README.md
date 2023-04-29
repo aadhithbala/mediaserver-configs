@@ -1,2 +1,3 @@
 # mediaserver-configs
-Configuration files for mediaserver
+
+Mediaserver config files, scripts and docker compose files.
