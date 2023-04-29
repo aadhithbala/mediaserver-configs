@@ -1,0 +1,120 @@
+version: "3.9"
+services:
+  qbittorrent:
+    restart: unless-stopped
+    container_name: qbittorrent
+    image: cr.hotio.dev/hotio/qbittorrent
+    ports:
+      - "8080:8080"
+      - "8118:8118"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Asia/Calcutta
+      - PRIVOXY_ENABLED=true
+    volumes:
+      - /docker/appdata/qbittorrent:/config
+      - /home/headlessnick/data/:/data/
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+    
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+      - JELLYFIN_PublishedServerUrl=192.168.1.100 #optional
+    volumes:
+      - /docker/appdata/jellyfin:/config
+      - /home/headlessnick/data/media/tv:/data/tvshows
+      - /home/headlessnick/data/media/movies:/data/movies
+    ports:
+      - 8096:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1900:1900/udp #optional
+    restart: unless-stopped
+    
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+         - LOG_LEVEL=debug
+         - TZ=Asia/Calcutta
+    ports:
+         - 5055:5055
+    volumes:
+         - /docker/appdata/overseerr:/app/config
+    restart: unless-stopped
+    
+  duplicacy:
+    container_name: duplicacy
+    hostname: duplicacy
+    image: cr.hotio.dev/hotio/duplicacy
+    restart: unless-stopped
+    ports:
+      - "3875:3875"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/duplicacy/config:/config
+      - /docker/appdata/duplicacy/cache:/cache
+      - /docker/appdata/duplicacy/logs:/logs
+      - /docker/appdata/:/config-backup
+      - /home/headlessnick/compose:/docker-compose
+
+      
+  watchtower:
+    container_name: watchtower
+    restart: unless-stopped
+    image: containrrr/watchtower
+    environment:
+      - TZ=Asia/Calcutta
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 30 15 * * *
+      - WATCHTOWER_REMOVE_VOLUMES=true
+      - WATCHTOWER_NOTIFICATIONS=slack
+      - WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL=INSERT_DISCORD_WEBHOOK/slack
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /docker/appdata/homarr/:/app/data/configs
+      - /docker/appdata/homarr:/app/public/icons
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7575:7575
+
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=Asia/Calcutta
+    ports:
+      - "${PORT:-8191}:8191"
+    restart: unless-stopped
+    
+  requestrr:
+    container_name: requestrr
+    image: darkalfx/requestrr:latest
+    ports:
+      - 4545:4545
+    volumes:
+      - /docker/appdata/requestrr/config/:/root/config
+    restart: unless-stopped

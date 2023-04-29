@@ -1,0 +1,54 @@
+version: '3.5'
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    volumes:
+      - /docker/appdata/uptime-kuma/:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 3001:3001
+    restart: always
+    
+  dash:
+    container_name: dashdot
+    image: mauricenino/dashdot:latest
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - '80:3001'
+    environment:
+      - DASHDOT_ENABLE_CPU_TEMPS=true
+    volumes:
+      - /:/mnt/host:ro
+      
+  netdata:
+    image: netdata/netdata:stable
+    container_name: netdata
+    hostname: mediaserver # set to fqdn of host
+    ports:
+      - 19999:19999
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+    environment:
+      - NETDATA_CLAIM_TOKEN=ENTER_CLAIM_TOKEN
+      - NETDATA_CLAIM_URL=https://app.netdata.cloud
+      - NETDATA_CLAIM_ROOMS=
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
