@@ -1,0 +1,257 @@
+services:
+  #PROXY MANAGER
+  nginxproxymanager:
+    image: "jc21/nginx-proxy-manager:latest"
+    container_name: nginxproxymanager
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /docker/appdata/nginx/data:/data
+      - /docker/appdata/nginx/letsencrypt:/etc/letsencrypt
+
+  #Download Client
+  qbittorrent:
+    restart: unless-stopped
+    container_name: qbittorrent
+    image: ghcr.io/hotio/qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Asia/Calcutta
+      - PRIVOXY_ENABLED=true
+
+    volumes:
+      - /docker/appdata/qbittorrent:/config
+      - /home/headlessnick/data/:/data/
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+
+  #Plex Streaming
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+      - VERSION=docker
+      - PLEX_CLAIM=${CLAIM_TOKEN}
+
+    volumes:
+      - /docker/appdata/plex/config:/config
+      - /home/headlessnick/data/media/tv:/tv
+      - /home/headlessnick/data/media/movies:/movies
+
+    restart: unless-stopped
+
+  #Container Update Manager
+  watchtower:
+    container_name: watchtower
+    restart: unless-stopped
+    image: containrrr/watchtower
+    environment:
+      - TZ=Asia/Calcutta
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 0 23 * * 6
+      - WATCHTOWER_REMOVE_VOLUMES=true
+      - WATCHTOWER_NOTIFICATIONS=slack
+      - WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL=https://discord.com/api/webhooks/${DISCORD_WEBHOOK_TOKEN}/slack
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  #Glance - Shiny new Dashboard
+  glance:
+    container_name: glance
+    image: glanceapp/glance
+    volumes:
+      - /docker/appdata/glance/glance.yml:/app/glance.yml
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /docker/appdata/glance/assets:/app/assets
+
+    restart: unless-stopped
+
+  #Audiobook Client
+  audiobookshelf:
+    restart: unless-stopped
+    container_name: audiobook-shelf
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    volumes:
+      - /home/headlessnick/data/media/audiobooks:/audiobooks
+      - /docker/appdata/audiobookshelf/config:/config
+      - /docker/appdata/audiobookshelf/metdata:/metadata
+
+  #Media Request
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/overseer/config:/app/config
+    restart: unless-stopped
+    network_mode: service:protonwire
+
+  #Plex Statistics
+  tautulli:
+    image: ghcr.io/tautulli/tautulli
+    container_name: tautulli
+    restart: unless-stopped
+    volumes:
+      - /docker/appdata/tautulli/config:/config
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+    networks:
+      services_default:
+        ipv4_address: #static ip
+
+  #Movie Manager
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr:latest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/radarr:/config
+      - /home/headlessnick/data/:/data
+    networks:
+      services_default:
+        ipv4_address: #static ip
+
+  #Shows Manager
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr:latest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/sonarr:/config
+      - /home/headlessnick/data/:/data
+    networks:
+      services_default:
+        ipv4_address: #static ip
+
+  #Subtitles
+  bazarr:
+    container_name: bazarr
+    restart: unless-stopped
+    image: lscr.io/linuxserver/bazarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/bazarr/:/config
+      - /home/headlessnick/data/:/data
+
+  #Audio and Ebook Manager
+  readarr:
+    image: lscr.io/linuxserver/readarr:develop
+    container_name: readarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/readarr/:/config
+      - /home/headlessnick/data/:/data
+    restart: unless-stopped
+
+  #Torrent Indexer
+  prowlarr:
+    container_name: prowlarr
+    image: ghcr.io/hotio/prowlarr
+    dns:
+      - 1.1.1.1
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - UMASK=002
+      - TZ=Asia/Calcutta
+    volumes:
+      - /docker/appdata/prowlarr/config:/config
+    restart: unless-stopped
+
+  #Cloudflare Captcha Solver
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=Asia/Calcutta
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+
+    volumes:
+      - /docker/appdata/uptime-kuma/:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+
+  dash:
+    container_name: dashdot
+    image: mauricenino/dashdot:latest
+    restart: unless-stopped
+    privileged: true
+
+    environment:
+      - DASHDOT_ENABLE_CPU_TEMPS=true
+    volumes:
+      - /:/mnt/host:ro
+
+  # Proton VPN Container for Overseerr. Since the government ordered ISP to block TMDB API for national security reasons/s
+  protonwire:
+    container_name: protonwire
+    image: ghcr.io/tprasadtp/protonwire:latest
+    init: true
+    restart: unless-stopped
+    environment:
+      PROTONVPN_SERVER: 149.88.103.33 # Replace with your desired server
+      DEBUG: "1"
+      KILL_SWITCH: "0"
+    # NET_ADMIN capability is mandatory!
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.conf.all.rp_filter: 2
+      net.ipv6.conf.all.disable_ipv6: 1
+    volumes:
+      - type: tmpfs
+        target: /tmp
+      - type: bind
+        source: /docker/appdata/protonvpn/private.key # Path to your private key file
+        target: /etc/protonwire/private-key
+        read_only: true
+
+networks:
+  services_default:
+    external: true
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16

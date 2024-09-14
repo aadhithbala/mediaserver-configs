@@ -1,0 +1,24 @@
+name: adguardhome
+
+services:
+  adguardhome:
+    container_name: adguard
+    restart: unless-stopped
+    image: adguard/adguardhome
+    environment:
+      - TZ=Asia/Calcutta
+    ports:
+      - 53:53/tcp # plain dns over tcp
+      - 53:53/udp # plain dns over udp
+
+    volumes:
+      - /docker/appdata/adguard/conf:/opt/adguardhome/conf # app configuration
+      - /docker/appdata/adguard/work:/opt/adguardhome/work # app working directory
+    network_mode: services_default
+
+volumes:
+  config:
+    driver: local
+  work:
+    driver: local
+
